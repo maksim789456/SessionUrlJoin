@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using FrooxEngine;
 using HarmonyLib;
+using CodeX;
 using NeosModLoader;
 
 namespace SessionUrlJoin
@@ -25,43 +26,54 @@ namespace SessionUrlJoin
         {
             static bool Prefix(Slot root, IEnumerable<string> files)
             {
-                IEnumerable<string> rawUrls = files.Where(x =>
-                    x.StartsWith("lnl-nat://") || x.StartsWith("neos-steam://") || x.StartsWith("lnl://"));
-
-                List<Uri> urls = new List<Uri>();
-                foreach (var rawUrl in rawUrls)
+                foreach (string str in files)
                 {
-                    try
+                    AssetClass key = AssetHelper.IdentifyClass(str);
+                    if (key != AssetClass.Unknown) continue;
+
+                    List<string> rawUrls = new List<string>();
+                    // Two session urls can contains line break symbols
+                    if (str.Contains('\n'))
                     {
-                        var url = new Uri(rawUrl);
-                        urls.Add(url);
+                        string[] splitedStr = str.Replace("\r", "").Split('\n');
+                        rawUrls.AddRange(splitedStr);
                     }
-                    catch (Exception e)
+                    else
                     {
-                        Warn($"Url {rawUrl} cannot parse. Error message: {e.Message}");
+                        rawUrls.Add(str);
                     }
-                }
 
-                if (urls.Count == 0)
-                {
-                    Warn("Don't valid urls");
-                    return true;
-                }
-
-                root.World.Coroutines.StartTask(async () =>
-                {
-                    LoadingIndicator loadingIndicator = await LoadingIndicator.CreateIndicator();
-
-                    await Userspace.OpenWorld(new WorldStartSettings()
+                    List<Uri> urls = new List<Uri>();
+                    foreach (string rawUrl in rawUrls)
                     {
-                        URIs = urls,
-                        GetExisting = true,
-                        Relation = Userspace.WorldRelation.Nest,
-                        LoadingIndicator = loadingIndicator
+                        if (Uri.TryCreate(rawUrl, UriKind.Absolute, out Uri uri))
+                        {
+                            if (Userspace.Current.Engine.NetworkManager.IsSupportedSessionScheme(uri.Scheme))
+                                urls.Add(uri);
+                        }
+                    }
+
+                    if (urls.Count == 0) continue;
+                    Debug($"Session urls: {string.Join(", ", urls)}");
+
+                    root.World.Coroutines.StartTask(async () =>
+                    {
+                        LoadingIndicator loadingIndicator = await LoadingIndicator.CreateIndicator();
+
+                        await Userspace.OpenWorld(new WorldStartSettings()
+                        {
+                            URIs = urls,
+                            GetExisting = true,
+                            Relation = Userspace.WorldRelation.Independent,
+                            LoadingIndicator = loadingIndicator
+                        });
+                        await Task.Delay(1000);
                     });
-                    await Task.Delay(1000);
-                });
-                return false;
+                    return false;
+                }
+
+                Warn("No valid session urls");
+                return true;
             }
         }
     }
