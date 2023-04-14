@@ -48,8 +48,17 @@ namespace SessionUrlJoin
                     {
                         if (Uri.TryCreate(rawUrl, UriKind.Absolute, out Uri uri))
                         {
-                            if (Userspace.Current.Engine.NetworkManager.IsSupportedSessionScheme(uri.Scheme))
+                            if (Userspace.Current.Engine.NetworkManager.IsSupportedSessionScheme(uri.Scheme) || uri.Scheme == "neos-session")
                                 urls.Add(uri);
+
+                            // Parse 'Session URL'
+                            if (uri.Host == "cloudx.azurewebsites.net" && uri.AbsolutePath.StartsWith("/open/session"))
+                            {
+                                var sessionId = uri.AbsolutePath.Replace("/open/session/", "");
+                                var neosSessionRawUrl = "neos-session:///" + sessionId;
+                                if (Uri.TryCreate(neosSessionRawUrl, UriKind.Absolute, out Uri neosSessionUri))
+                                    urls.Add(neosSessionUri);
+                            }
                         }
                     }
 
