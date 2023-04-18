@@ -13,7 +13,7 @@ namespace SessionUrlJoin
     {
         public override string Name => "SessionUrlJoin";
         public override string Author => "maksim789456";
-        public override string Version => "1.1.0";
+        public override string Version => "1.1.1";
 
         public override void OnEngineInit()
         {
