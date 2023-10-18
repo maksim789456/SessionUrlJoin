@@ -2,18 +2,18 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Elements.Assets;
 using FrooxEngine;
 using HarmonyLib;
-using CodeX;
-using NeosModLoader;
+using ResoniteModLoader;
 
 namespace SessionUrlJoin
 {
-    public class SessionUrlJoinMod : NeosMod
+    public class SessionUrlJoinMod : ResoniteMod
     {
         public override string Name => "SessionUrlJoin";
         public override string Author => "maksim789456";
-        public override string Version => "1.1.1";
+        public override string Version => "2.1.1";
 
         public override void OnEngineInit()
         {
@@ -48,14 +48,14 @@ namespace SessionUrlJoin
                     {
                         if (Uri.TryCreate(rawUrl, UriKind.Absolute, out Uri uri))
                         {
-                            if (Userspace.Current.Engine.NetworkManager.IsSupportedSessionScheme(uri.Scheme) || uri.Scheme == "neos-session")
+                            if (Userspace.Current.Engine.NetworkManager.IsSupportedSessionScheme(uri.Scheme) || uri.Scheme == "ressession")
                                 urls.Add(uri);
 
                             // Parse 'Session URL'
-                            if (uri.Host == "cloudx.azurewebsites.net" && uri.AbsolutePath.StartsWith("/open/session"))
+                            if (uri.Host == "api.resonite.com" && uri.AbsolutePath.StartsWith("/open/session"))
                             {
                                 var sessionId = uri.AbsolutePath.Replace("/open/session/", "");
-                                var neosSessionRawUrl = "neos-session:///" + sessionId;
+                                var neosSessionRawUrl = "ressession:///" + sessionId;
                                 if (Uri.TryCreate(neosSessionRawUrl, UriKind.Absolute, out Uri neosSessionUri))
                                     urls.Add(neosSessionUri);
                             }
@@ -67,14 +67,12 @@ namespace SessionUrlJoin
 
                     root.World.Coroutines.StartTask(async () =>
                     {
-                        LoadingIndicator loadingIndicator = await LoadingIndicator.CreateIndicator();
-
                         await Userspace.OpenWorld(new WorldStartSettings()
                         {
                             URIs = urls,
                             GetExisting = true,
+                            AutoFocus = true,
                             Relation = Userspace.WorldRelation.Independent,
-                            LoadingIndicator = loadingIndicator
                         });
                         await Task.Delay(1000);
                     });
